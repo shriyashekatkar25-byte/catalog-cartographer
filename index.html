@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catalog Cartographer</title>
+<meta name="description" content="Which data-governance feature should ship next? RICE scoring under uncertainty with Monte Carlo rank stability. APM Lab by Shriya Shekatkar.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#14213D; --paper:#FFF4E0; --paper2:#FBE7C6; --tomato:#E8472A; --sun:#FFC93C;
+  --teal:#137A70; --violet:#6A4DF0; --pink:#FF7AB6; --muted:#4A5068; --line:#14213D;
+  --card:#FFFDF7;
+  --c0:#E8472A; --c1:#6A4DF0; --c2:#137A70; --c3:#D9961A; --c4:#C2407F;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 "Space Grotesk",system-ui,sans-serif;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;opacity:.16;mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+a{color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+h1,h2,h3{font-family:Fraunces,Georgia,serif;line-height:1.05;margin:0 0 .4em}
+h2{font-size:clamp(28px,4.5vw,44px);font-weight:900}
+h3{font-size:20px}
+.mono{font-family:"JetBrains Mono",monospace}
+section{padding:56px 0}
+.kicker{font:700 12px/1 "JetBrains Mono",monospace;letter-spacing:.14em;text-transform:uppercase;display:inline-block;background:var(--ink);color:var(--paper);padding:7px 10px;border-radius:999px;margin-bottom:14px}
+
+/* HERO: travel-poster map */
+.hero{position:relative;background:#EDEBE6;color:#1E1E1E;border-bottom:4px solid var(--ink);overflow:hidden;padding:0}
+.hero::after{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(30,30,30,.16) 1.3px,transparent 1.6px);background-size:9px 9px;
+  -webkit-mask-image:linear-gradient(115deg,transparent 35%,#000 85%);mask-image:linear-gradient(115deg,transparent 35%,#000 85%);pointer-events:none}
+.hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:24px;align-items:center;padding:64px 16px 56px;position:relative;z-index:1}
+.hero h1{font-family:Anton,Impact,sans-serif;font-weight:400;text-transform:uppercase;font-size:clamp(40px,6.4vw,82px);line-height:1.02;letter-spacing:.005em;color:#1E1E1E}
+.hero h1 em{font-style:normal;color:#757575}
+.hero h1 .dot{display:inline-block;width:.16em;height:.16em;background:#1E1E1E;margin-left:.05em}
+.hero .lede{font-size:clamp(17px,2vw,20px);max-width:36em}
+.hero .launch{display:inline-block;margin-top:14px;background:#fff;color:#1E1E1E;border:3px solid #1E1E1E;border-radius:4px;padding:10px 14px;box-shadow:5px 5px 0 #1E1E1E;font-size:15px}
+.byline{margin-top:22px;font:700 13px/1.4 "JetBrains Mono",monospace;letter-spacing:.06em;text-transform:uppercase}
+.compass{width:100%;max-width:420px;justify-self:center}
+.compass .spin{transform-origin:200px 200px;animation:spin 40s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.float{animation:bob 4s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-8px)}}
+
+/* Board / masonry cards */
+.board{columns:3 280px;column-gap:18px}
+.pin{break-inside:avoid;display:inline-block;width:100%;background:linear-gradient(160deg,#CFEAFA 0%,#EAF6FD 45%,#FFFFFF 100%);border:3px solid var(--ink);border-radius:20px;padding:18px;margin:16px 0 8px;box-shadow:6px 6px 0 var(--ink);position:relative}
+.pin .tag{position:absolute;top:-14px;right:16px;font:700 12px/1 "JetBrains Mono",monospace;letter-spacing:0;padding:7px 10px;border-radius:6px;border:2px solid var(--ink);background:#fff;color:#1F3FD6}
+.pin .tag::before{content:"<"}.pin .tag::after{content:">"}
+.pin.t2 .tag,.pin.t4 .tag{font-style:italic}
+.pin h3{font-family:"JetBrains Mono",monospace;font-size:18px;color:#1F3FD6}
+.cursor{position:absolute;right:14px;bottom:12px;width:18px;height:22px}
+.pin ul{padding-left:18px;margin:.4em 0} .pin li{margin:.25em 0}
+.caption{font-size:13px;color:var(--muted);margin-top:8px;border-top:2px dashed #c9b99a;padding-top:8px}
+table.g{width:100%;border-collapse:collapse;font-size:14px}
+table.g td{padding:5px 0;border-bottom:1px solid #e3d5b8;vertical-align:top}
+table.g td:last-child{text-align:right;font-family:"JetBrains Mono",monospace;font-weight:700;white-space:nowrap;padding-left:8px}
+
+/* Candidate chips */
+.cands{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin:18px 0 0}
+.cand{border:3px solid var(--ink);border-radius:16px;padding:12px;background:linear-gradient(160deg,#CFEAFA,#FFFFFF 70%);font-size:14px}
+.cand b{font-family:"JetBrains Mono",monospace;color:#1F3FD6;font-size:14px}
+.cand b{display:flex;align-items:center;gap:8px;font-size:15px}
+.dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--ink);flex:none}
+.cand .mono{font-size:12px;color:var(--muted)}
+
+/* SIM ROOM */
+.sim{background:linear-gradient(180deg,#2C3E50 0%,#3E5468 70%,#5A7184 100%);color:#F5F1EA;border-top:4px solid var(--ink);border-bottom:4px solid var(--ink);position:relative}
+.sim::before{content:"";position:absolute;inset:0;background-image:radial-gradient(1px 1px at 12% 18%,#fff 50%,transparent 51%),radial-gradient(1px 1px at 37% 8%,#fff 50%,transparent 51%),radial-gradient(1.5px 1.5px at 64% 22%,#fff 50%,transparent 51%),radial-gradient(1px 1px at 82% 12%,#fff 50%,transparent 51%),radial-gradient(1px 1px at 91% 40%,#fff 50%,transparent 51%),radial-gradient(1px 1px at 22% 46%,#fff 50%,transparent 51%),radial-gradient(1.5px 1.5px at 50% 36%,#fff 50%,transparent 51%);background-size:420px 300px;opacity:.7;pointer-events:none}
+.sim .wrap{position:relative}
+.sim h2{color:#F5F1EA}
+.simgrid{display:grid;grid-template-columns:300px 1fr;gap:20px}
+.panel{background:rgba(28,40,54,.82);border:2px solid #E9EEF2;border-radius:18px;padding:16px}
+.ctrl{margin:0 0 16px}
+.ctrl label{display:flex;justify-content:space-between;font-size:14px;font-weight:700;margin-bottom:6px}
+.ctrl output{font-family:"JetBrains Mono",monospace;color:#F2C9A8}
+input[type=range]{width:100%;accent-color:#E9EEF2}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+button{font:700 14px "JetBrains Mono",monospace;border:3px solid var(--ink);background:linear-gradient(160deg,#CFEAFA,#fff);color:#1F3FD6;padding:10px 14px;border-radius:8px;cursor:pointer;box-shadow:3px 3px 0 #FFF4E0;transition:transform .1s}
+button:hover{transform:translate(-1px,-1px)} button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #FFF4E0}
+button.alt{background:#fff;font-style:italic}
+button:focus-visible,input:focus-visible{outline:3px solid var(--pink);outline-offset:2px}
+canvas{width:100%;display:block;border-radius:14px;background:#EEF2F5}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
+.badge{position:relative;overflow:hidden;border-radius:18px;padding:14px 12px;text-align:center;color:#F2C14E;border:3px solid #0E1640;
+  background:radial-gradient(circle at calc(100% - 14px) 14px,#F4EED2 0 7px,rgba(244,238,210,.35) 8px,rgba(244,238,210,0) 18px),radial-gradient(1px 1px at 20% 30%,#fff 60%,transparent 61%),radial-gradient(1px 1px at 60% 15%,#fff 60%,transparent 61%),radial-gradient(1.4px 1.4px at 35% 70%,#fff 60%,transparent 61%),linear-gradient(180deg,#1A2A7A,#2B47B5);box-shadow:inset 0 -8px 0 #C8352B,0 4px 0 #0E1640}
+.badge .v{font-family:"JetBrains Mono",monospace!important}
+.badge .l{color:#F4EED2}
+.badge .v{font:700 clamp(20px,2.7vw,28px)/1.15 "JetBrains Mono",monospace;padding-top:6px}
+.badge .l{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding-bottom:6px}
+.legend{display:flex;flex-wrap:wrap;gap:10px 16px;font-size:13px;margin:10px 0 0}
+.legend span{display:flex;align-items:center;gap:6px}
+.ranktab{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+.ranktab th,.ranktab td{padding:5px 4px;text-align:right;border-bottom:1px solid rgba(255,244,224,.2)}
+.ranktab th:first-child,.ranktab td:first-child{text-align:left}
+.ranktab th{font-weight:700;color:#F2C9A8;font-size:12px}
+.note{font-size:13px;color:#E8DCC4;margin-top:10px}
+
+/* MEMO */
+.memo{background:var(--card);border:3px solid var(--ink);border-radius:6px;padding:28px;box-shadow:10px 10px 0 var(--tomato);position:relative;max-width:860px}
+.memo::before{content:"MEMO";position:absolute;top:-18px;left:22px;background:var(--tomato);color:#FFF8EC;font:900 14px Fraunces,serif;letter-spacing:.2em;padding:6px 12px;border:3px solid var(--ink)}
+.memo dt{font:700 12px "JetBrains Mono",monospace;text-transform:uppercase;letter-spacing:.1em;color:var(--tomato);margin-top:14px}
+.memo dd{margin:4px 0 0}
+.vp{margin-top:18px;background:var(--sun);border:3px solid var(--ink);border-radius:14px;padding:14px;font-weight:700}
+
+/* math + code */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.formula{font:700 15px "JetBrains Mono",monospace;background:var(--paper2);border:2px solid var(--ink);border-radius:12px;padding:12px;overflow-x:auto}
+pre{background:#14213D;color:#FFF4E0;border-radius:14px;padding:16px;overflow-x:auto;font:13px/1.5 "JetBrains Mono",monospace;margin:0;border:3px solid var(--ink)}
+pre .c{color:#9EE6D9} pre .k{color:#FFC93C}
+
+footer{border-top:4px solid var(--ink);padding:28px 0 40px;background:var(--paper2)}
+footer p{margin:.4em 0}
+.credits{font-size:11px;color:#5A5F73}
+.credits a{color:#5A5F73}
+
+@media (max-width:860px){
+  .hero-grid,.simgrid,.two{grid-template-columns:1fr}
+  .compass{max-width:260px}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+}
+@media (prefers-reduced-motion:reduce){
+  .compass .spin,.float{animation:none}
+  html{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="kicker" style="background:#1E1E1E;color:#EDEBE6">APM Lab · Decision prototype</span>
+      <h1>I don't need a perfect map. I need to know which roads <em>survive the fog</em><span class="dot" aria-hidden="true"></span></h1>
+      <p class="lede">Five governance features, one quarter of engineering time. Every RICE input is a guess, so instead of one score I run thousands of plausible futures and ask: how often does each feature actually come out on top?</p>
+      <div class="launch">Mirrors: <a href="https://docs.databricks.com/aws/en/release-notes/product/2026/october">Unity Catalog's October 2026 releases</a> (governed tag propagation Beta, Discover &amp; domains GA, Data Classification API GA)</div>
+      <div class="byline">Shriya Shekatkar · UCLA · Stats 102C Monte Carlo Methods</div>
+    </div>
+    <svg class="compass" viewBox="0 0 400 400" role="img" aria-label="Illustrated compass rose over a dotted map with five island markers">
+      <defs>
+        <radialGradient id="enamel" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".6" stop-color="#E4E2DC"/><stop offset="1" stop-color="#BDBBB5"/></radialGradient>
+        <linearGradient id="chrome" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#9aa3b8"/><stop offset=".55" stop-color="#e9edf5"/><stop offset="1" stop-color="#6b7591"/></linearGradient>
+      </defs>
+      <circle cx="200" cy="200" r="186" fill="#1E1E1E"/>
+      <circle cx="200" cy="200" r="174" fill="url(#enamel)" stroke="#14213D" stroke-width="5"/>
+      <g fill="#14213D" opacity=".18">
+        <path d="M70 150c30-30 70-20 90 5s10 55-25 60-90-30-65-65z"/><path d="M230 260c40-20 90 0 95 30s-40 50-75 35-50-50-20-65z"/><path d="M250 90c25-10 55 5 55 25s-30 30-50 20-25-38-5-45z"/>
+      </g>
+      <g class="spin">
+        <circle cx="200" cy="200" r="150" fill="none" stroke="#14213D" stroke-width="2" stroke-dasharray="3 9"/>
+        <g font-family="JetBrains Mono,monospace" font-weight="700" font-size="16" fill="#14213D" text-anchor="middle">
+          <text x="200" y="66">R</text><text x="340" y="206">I</text><text x="200" y="346">C</text><text x="60" y="206">E</text>
+        </g>
+      </g>
+      <polygon points="200,58 222,200 200,342 178,200" fill="url(#chrome)" stroke="#14213D" stroke-width="4"/>
+      <polygon points="58,200 200,178 342,200 200,222" fill="#1E1E1E" stroke="#14213D" stroke-width="4"/>
+      <polygon points="200,58 222,200 200,200" fill="#14213D" opacity=".35"/>
+      <circle cx="200" cy="200" r="16" fill="#EDEBE6" stroke="#14213D" stroke-width="4"/>
+      <g class="float" stroke="#14213D" stroke-width="3">
+        <circle cx="96" cy="118" r="11" fill="#E8472A"/><circle cx="312" cy="112" r="11" fill="#6A4DF0"/><circle cx="300" cy="300" r="11" fill="#137A70"/><circle cx="104" cy="292" r="11" fill="#D9961A"/><circle cx="200" cy="378" r="9" fill="#C2407F"/>
+      </g>
+    </svg>
+  </div>
+</header>
+
+<main>
+<section id="decision">
+  <div class="wrap">
+    <span class="kicker">01 · The decision</span>
+    <h2>Which governance feature earns next quarter's team?</h2>
+    <p style="max-width:46em">I'm playing the PM for catalog governance. Engineering can fully staff one of five candidates next quarter. A spreadsheet RICE score would crown a winner to two decimals. But reach is a forecast, impact is a judgment call, and effort estimates slip. The real question: <b>is the winner robust, or a coin flip dressed up as a ranking?</b></p>
+    <div class="cands" id="cands"></div>
+    <div class="board" style="margin-top:28px">
+      <article class="pin">
+        <span class="tag">customer_problem</span>
+        <h3>Tags stop at the first copy</h3>
+        <p>A steward tags <span class="mono">customers.email</span> as PII. An analyst runs CREATE TABLE AS SELECT, and the derived table starts life untagged and unmasked. In a big lakehouse, most sensitive data lives in derived tables, so governance quietly leaks downstream.</p>
+        <div class="caption">Pinned from: steward interviews (simulated) · 6 of 8 named "derived tables" as the top audit gap</div>
+      <svg class="cursor" viewBox="0 0 9 11" aria-hidden="true" shape-rendering="crispEdges"><path d="M0 0h1v1h1v1h1v1h1v1h1v1h1v1h1v1h-3v1h1v2h-1v-1h-1v-1h-1v1h-1z" fill="#fff" stroke="#1F3FD6" stroke-width=".6"/></svg></article>
+      <article class="pin t2">
+        <span class="tag">proposed_change</span>
+        <h3>Pick the feature the futures agree on</h3>
+        <p>Score each candidate with RICE where every input is a range, not a point. Simulate 1,000s of draws, record who ranks #1 each time, and commit only if the leader wins in at least 60% of futures. Otherwise, spend two weeks shrinking the widest range first.</p>
+        <div class="caption">Decision rule set before looking at results, so the sim can't be tuned to a favorite.</div>
+      <svg class="cursor" viewBox="0 0 9 11" aria-hidden="true" shape-rendering="crispEdges"><path d="M0 0h1v1h1v1h1v1h1v1h1v1h1v1h1v1h-3v1h1v2h-1v-1h-1v-1h-1v1h-1z" fill="#fff" stroke="#1F3FD6" stroke-width=".6"/></svg></article>
+      <article class="pin t3">
+        <span class="tag">success_metric</span>
+        <h3>Governed coverage of derived data</h3>
+        <p>Share of derived tables containing sensitive columns that carry the correct governed tag within 24h of creation. <b>Baseline 41% → target 80%</b> one quarter after GA.</p>
+      <svg class="cursor" viewBox="0 0 9 11" aria-hidden="true" shape-rendering="crispEdges"><path d="M0 0h1v1h1v1h1v1h1v1h1v1h1v1h1v1h-3v1h1v2h-1v-1h-1v-1h-1v1h-1z" fill="#fff" stroke="#1F3FD6" stroke-width=".6"/></svg></article>
+      <article class="pin t4">
+        <span class="tag">guardrails</span>
+        <table class="g">
+          <tr><td>Wrong-tag rate (false propagation)</td><td>&lt; 0.5%</td></tr>
+          <tr><td>Lineage-compute overhead on serverless bill</td><td>&lt; 2%</td></tr>
+          <tr><td>Steward manual-override rate</td><td>&lt; 5%</td></tr>
+          <tr><td>p95 query latency on tagged tables</td><td>+&lt; 50 ms</td></tr>
+        </table>
+      <svg class="cursor" viewBox="0 0 9 11" aria-hidden="true" shape-rendering="crispEdges"><path d="M0 0h1v1h1v1h1v1h1v1h1v1h1v1h1v1h-3v1h1v2h-1v-1h-1v-1h-1v1h-1z" fill="#fff" stroke="#1F3FD6" stroke-width=".6"/></svg></article>
+      <article class="pin">
+        <span class="tag">stakeholders</span>
+        <ul>
+          <li><b>Data stewards / CDOs</b>: want coverage they can prove to auditors</li>
+          <li><b>Analysts &amp; data engineers</b>: no surprise masks breaking dashboards</li>
+          <li><b>Catalog + lineage eng</b>: own effort estimates and the overhead budget</li>
+          <li><b>Field &amp; compliance</b>: regulated-industry deals hinge on it</li>
+          <li><b>Finance</b>: lineage compute must not show up on bills</li>
+        </ul>
+      <svg class="cursor" viewBox="0 0 9 11" aria-hidden="true" shape-rendering="crispEdges"><path d="M0 0h1v1h1v1h1v1h1v1h1v1h1v1h1v1h-3v1h1v2h-1v-1h-1v-1h-1v1h-1z" fill="#fff" stroke="#1F3FD6" stroke-width=".6"/></svg></article>
+    </div>
+  </div>
+</section>
+
+<section class="sim" id="sim">
+  <div class="wrap">
+    <span class="kicker" style="background:#F5F1EA;color:#2C3E50">02 · Live simulation</span>
+    <h2>The fog machine</h2>
+    <p style="max-width:46em">Each dot is one possible future. For every future I draw Reach, Impact, Confidence and Effort for all five features uniformly within their ranges, compute RICE = R·I·C / E, and drop a dot in the lane of the winner. The line on the right tracks the estimated chance the leader wins, with a ±1.96·SE band.</p>
+    <div class="simgrid">
+      <div class="panel">
+        <div class="ctrl"><label for="unc">Fog (input uncertainty) <output id="uncO"></output></label><input id="unc" type="range" min="10" max="100" step="5" value="40"></div>
+        <div class="ctrl"><label for="n">Futures to simulate <output id="nO"></output></label><input id="n" type="range" min="200" max="20000" step="200" value="5000"></div>
+        <div class="ctrl"><label for="eff">Tag-propagation effort (eng-weeks) <output id="effO"></output></label><input id="eff" type="range" min="10" max="30" step="1" value="19"></div>
+        <div class="ctrl"><label for="bar">Commit bar: leader wins ≥ <output id="barO"></output></label><input id="bar" type="range" min="40" max="90" step="5" value="60"></div>
+        <div class="btns"><button id="run">&lt;run_futures&gt;</button><button id="reseed" class="alt">&lt;new_seed&gt;</button></div>
+        <p class="note mono" id="seedO"></p>
+        <table class="ranktab" aria-label="Probability each feature ranks first">
+          <thead><tr><th>Feature</th><th>P(#1)</th><th>±SE</th><th>Mean RICE</th></tr></thead>
+          <tbody id="rt"></tbody>
+        </table>
+      </div>
+      <div>
+        <canvas id="cv" width="900" height="420" aria-label="Animated dots falling into five lanes, one per feature, plus a convergence line for the leader's win probability"></canvas>
+        <div class="legend" id="lg"></div>
+        <div class="kpis" aria-live="polite">
+          <div class="badge"><div class="v" id="k1">–</div><div class="l">Leader wins</div></div>
+          <div class="badge"><div class="v" id="k2">–</div><div class="l">±1.96·SE</div></div>
+          <div class="badge"><div class="v" id="k3">–</div><div class="l">Leader in top 2</div></div>
+          <div class="badge"><div class="v" id="k4">–</div><div class="l">Verdict</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="memo">
+  <div class="wrap">
+    <span class="kicker">03 · Director memo (rewrites itself)</span>
+    <h2>What I'd send on Friday</h2>
+    <dl class="memo" id="memoBox"></dl>
+  </div>
+</section>
+
+<section id="math" style="background:var(--paper2);border-top:4px solid var(--ink);border-bottom:4px solid var(--ink)">
+  <div class="wrap">
+    <span class="kicker">04 · The math, from my Monte Carlo course</span>
+    <h2>A ranking is a probability in disguise</h2>
+    <div class="two">
+      <div>
+        <p><b>Fraction-of-hits estimation (Ch. 1).</b> The classic warm-up throws random darts at a square and counts the share that land inside a shape to estimate its area. Here the "shape" is the set of futures where a feature comes out on top. Each simulated future is a dart; the share of darts in feature A's region estimates P(A ranks #1).</p>
+        <p><b>Why it's trustworthy.</b> The number of wins in n futures is Binomial(n, p), so the share p̂ is unbiased and its variance is p(1−p)/n. Doubling the futures shrinks the standard error by about 30%. The Strong Law of Large Numbers says the running share settles on the true p, which is exactly the line you watch flatten in the chart.</p>
+        <p><b>Expectations as averages.</b> Mean RICE is just the sample average of R·I·C/E across draws. Note it is <i>not</i> the RICE of the average inputs, because dividing by an uncertain effort pulls the average up (Jensen's inequality). Spreadsheets miss that.</p>
+      </div>
+      <div>
+        <div class="formula">p̂ = (1/n) Σ 1[ feature k has max RICE in draw i ]<br><br>SE(p̂) = √( p̂(1−p̂) / n )<br><br>95% band: p̂ ± 1.96·SE</div>
+        <p style="margin-top:14px"><b>Product example.</b> With 5,000 futures and p̂ = 0.62, SE ≈ 0.0069, so the band is roughly 0.61 to 0.63. That's tight enough to say "the leader wins about 6 in 10 futures." It does <i>not</i> say the leader is great. It says how much the fog could reshuffle the order, which is what a roadmap review actually argues about.</p>
+        <p><b>Seeded randomness.</b> I use a fixed-seed generator so a reviewer who presses "Run" sees the same numbers I quoted. Change the seed and the estimate should move only within its band. If it moves more, n is too small.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="real">
+  <div class="wrap">
+    <span class="kicker">05 · How I'd run it on real data</span>
+    <h2>From guesses to measured ranges</h2>
+    <p style="max-width:46em">The ranges above are simulated. In practice I'd fit Reach from system tables, Effort from historical estimate-vs-actual slippage, and keep Impact and Confidence as explicit, reviewed judgment calls. Table names are illustrative.</p>
+    <div class="two">
+      <pre><span class="c">-- Reach: workspaces creating derived tables
+-- from tagged sources (last 90 days)</span>
+<span class="k">WITH</span> tagged_src <span class="k">AS</span> (
+  <span class="k">SELECT DISTINCT</span> table_full_name
+  <span class="k">FROM</span> gov.catalog_tags
+  <span class="k">WHERE</span> tag_name <span class="k">IN</span> ('pii','phi','pci')
+),
+derived <span class="k">AS</span> (
+  <span class="k">SELECT</span> l.workspace_id, l.target_table
+  <span class="k">FROM</span> gov.table_lineage l
+  <span class="k">JOIN</span> tagged_src s
+    <span class="k">ON</span> l.source_table = s.table_full_name
+  <span class="k">WHERE</span> l.event_date &gt;= current_date() - 90
+)
+<span class="k">SELECT</span>
+  count(<span class="k">DISTINCT</span> workspace_id)  <span class="k">AS</span> reach_ws,
+  avg(<span class="k">CASE WHEN</span> t.tag_name <span class="k">IS NULL</span>
+      <span class="k">THEN</span> 1 <span class="k">ELSE</span> 0 <span class="k">END</span>)       <span class="k">AS</span> untagged_share
+<span class="k">FROM</span> derived d
+<span class="k">LEFT JOIN</span> gov.catalog_tags t
+  <span class="k">ON</span> d.target_table = t.table_full_name;</pre>
+      <pre><span class="k">import</span> numpy <span class="k">as</span> np
+rng = np.random.default_rng(<span class="k">102</span>)
+
+<span class="c"># ranges: (low, high) per feature, pulled from
+# the query above + estimate-slippage history</span>
+R = spark.table(<span class="k">"pm.rice_ranges"</span>).toPandas()
+n, k = 20_000, len(R)
+
+draw = <span class="k">lambda</span> lo, hi: rng.uniform(lo, hi, (n, k))
+rice = (draw(R.reach_lo,  R.reach_hi)
+      * draw(R.impact_lo, R.impact_hi)
+      * draw(R.conf_lo,   R.conf_hi)
+      / draw(R.eff_lo,    R.eff_hi))
+
+wins = np.bincount(rice.argmax(1), minlength=k)
+p = wins / n
+se = np.sqrt(p * (1 - p) / n)
+<span class="k">for</span> name, pk, s <span class="k">in</span> zip(R.feature, p, se):
+    print(f<span class="k">"{name:28s} {pk:.3f} ± {1.96*s:.3f}"</span>)</pre>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><b>Unofficial concept prototype by Shriya Shekatkar. All data is simulated. Not affiliated with any company.</b></p>
+    <p>Part of <a href="https://shriyashekatkar25-byte.github.io/apm-lab/">APM Lab, the gallery</a> · Product facts sourced from public release notes (see README).</p>
+    <p class="credits" id="credits">Design inspired by: <a href="https://www.pinterest.com/pin/406238828912355412/">Affirmations poster (Shei Oliveras)</a> · <a href="https://www.pinterest.com/pin/1056094181381654521/">Tech That Actually Makes Life Easier (oh!)</a> · <a href="https://www.pinterest.com/pin/894949757223897316/">Hopecore</a> · <a href="https://www.pinterest.com/pin/571042427773907103/">Horses under the stars (Gracielagraciegrace)</a>. All visuals redrawn in SVG/CSS; no pin images used.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+"use strict";
+var F=[
+ {k:"A",name:"Tag propagation → GA",short:"Tag propagation",c:"#E8472A",R:[1800,3200],I:[1.7,2.7],C:[.7,.9],E:null,why:"Extends governed tags along lineage so derived tables inherit PII/PHI tags."},
+ {k:"B",name:"Auto-mask from classification",short:"Auto-mask",c:"#6A4DF0",R:[1200,3400],I:[1.5,3],C:[.5,.8],E:[16,30],why:"Turns classification results into suggested column masks stewards can approve."},
+ {k:"C",name:"Certified-asset trust badges",short:"Trust badges",c:"#137A70",R:[2500,4500],I:[.5,1.1],C:[.7,.95],E:[8,14],why:"Lets domain owners certify tables in Discover so analysts pick the right one."},
+ {k:"D",name:"Metadata access requests",short:"Access requests",c:"#D9961A",R:[1500,2600],I:[1,2],C:[.6,.85],E:[10,18],why:"Users who can see metadata request data access in one click, routed to owners."},
+ {k:"E",name:"Cross-engine policy audit view",short:"Policy audit",c:"#C2407F",R:[600,1400],I:[2,3],C:[.6,.9],E:[12,20],why:"One view of which external engines read masked data and under which policy."}
+];
+var $=function(id){return document.getElementById(id)};
+var reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+var seed=102;
+function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+// candidate chips
+$("cands").innerHTML=F.map(function(f){return '<div class="cand"><b><span class="dot" style="background:'+f.c+'"></span>'+f.k+' · '+f.name+'</b><div>'+f.why+'</div></div>'}).join("");
+$("lg").innerHTML=F.map(function(f){return '<span><i class="dot" style="background:'+f.c+'"></i>'+f.k+' '+f.short+'</span>'}).join("");
+
+function widen(r,u){var m=(r[0]+r[1])/2,h=(r[1]-r[0])/2*(u/50);return[Math.max(m-h,m*0.05),m+h]}
+function simulate(n,u,effA,s){
+  var rand=rng(s),k=F.length,wins=new Array(k).fill(0),sum=new Array(k).fill(0),top2=0,winners=new Uint8Array(n),track=[];
+  var ranges=F.map(function(f){var E=f.E||[effA*0.8,effA*1.25];return{R:widen(f.R,u),I:widen(f.I,u),C:[Math.max(widen(f.C,u)[0],.2),Math.min(widen(f.C,u)[1],1)],E:widen(E,u)}});
+  function U(r){return r[0]+(r[1]-r[0])*rand()}
+  var scores=new Array(k);
+  for(var i=0;i<n;i++){
+    for(var j=0;j<k;j++){var g=ranges[j];var v=U(g.R)*U(g.I)*U(g.C)/U(g.E);scores[j]=v;sum[j]+=v}
+    var b=0;for(j=1;j<k;j++)if(scores[j]>scores[b])b=j;
+    wins[b]++;winners[i]=b;
+    var s2=-1;for(j=0;j<k;j++)if(j!==b&&(s2<0||scores[j]>scores[s2]))s2=j;
+    if(!track.t2)track.t2=new Uint8Array(n*k);
+    track.t2[i*k+b]=1;track.t2[i*k+s2]=1;
+  }
+  var leader=0;for(j=1;j<k;j++)if(wins[j]>wins[leader])leader=j;
+  var c=0,top2c=0,traj=[];
+  var step=Math.max(1,Math.floor(n/300));
+  for(i=0;i<n;i++){if(winners[i]===leader)c++;if(track.t2[i*k+leader])top2c++;if((i+1)%step===0||i===n-1)traj.push([i+1,c/(i+1)])}
+  return{n:n,wins:wins,mean:sum.map(function(x){return x/n}),leader:leader,winners:winners,traj:traj,top2:top2c/n};
+}
+
+var cv=$("cv"),ctx=cv.getContext("2d"),anim=null,last=null;
+function fitCanvas(){var w=cv.clientWidth||900;var h=w<560?440:Math.max(300,Math.min(420,w*0.55));var dpr=window.devicePixelRatio||1;cv.width=w*dpr;cv.height=h*dpr;cv.style.height=h+"px";ctx.setTransform(dpr,0,0,dpr,0,0);return{w:w,h:h}}
+function draw(res,shown){
+  var d=fitCanvas(),W=d.w,H=d.h,narrow=W<560;
+  var lanesW=narrow?W:W*0.58, chartX=narrow?0:lanesW+14, chartW=narrow?W:W-lanesW-14;
+  var laneH=narrow?H*0.58:H;
+  ctx.clearRect(0,0,W,H);
+  var sg=ctx.createLinearGradient(0,0,0,H);sg.addColorStop(0,"#DCE4EA");sg.addColorStop(1,"#F7F9FA");ctx.fillStyle=sg;ctx.fillRect(0,0,W,H);
+  // halftone corner
+  ctx.fillStyle="rgba(20,33,61,.08)";
+  for(var y=6;y<laneH;y+=10)for(var x=6;x<lanesW;x+=10){var r=1.6*(1-y/laneH);if(r>0.2){ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill()}}
+  var k=F.length,lw=lanesW/k,base=laneH-26;
+  var counts=new Array(k).fill(0);
+  var cap=Math.min(shown,res.n);
+  var perCol=Math.max(1,Math.floor((lw-12)/5));
+  var maxDots=Math.floor(((base-30)/5)*perCol);
+  var scale=Math.max(1,Math.ceil(res.n/ (maxDots*1.05)));
+  for(var i=0;i<cap;i++){var w=res.winners[i];counts[w]++;}
+  for(var j=0;j<k;j++){
+    var x0=j*lw;
+    ctx.fillStyle=j%2?"rgba(20,33,61,.04)":"rgba(20,33,61,0)";ctx.fillRect(x0,0,lw,laneH);
+    var dots=Math.floor(counts[j]/scale);
+    ctx.fillStyle=F[j].c;
+    for(var m=0;m<dots;m++){var col=m%perCol,row=Math.floor(m/perCol);var px=x0+8+col*5,py=base-4-row*5;if(py<24)break;ctx.fillRect(px,py,4,4)}
+    if(cap<res.n&&dots>0){var top=base-4-Math.floor((dots-1)/perCol)*5;ctx.globalAlpha=.35;for(var q2=0;q2<6;q2++){ctx.fillRect(x0+8+((q2*7)%(lw-20)),top-8-q2*9,2,14+q2*3)}ctx.globalAlpha=1}
+    ctx.fillStyle="#14213D";ctx.font="700 13px JetBrains Mono, monospace";ctx.textAlign="center";
+    ctx.fillText(F[j].k,x0+lw/2,laneH-8);
+    ctx.font="700 12px JetBrains Mono, monospace";
+    ctx.fillText(cap?Math.round(counts[j]/cap*100)+"%":"",x0+lw/2,16);
+  }
+  ctx.strokeStyle="#14213D";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,base);ctx.lineTo(lanesW,base);ctx.stroke();
+  ctx.textAlign="left";ctx.font="11px JetBrains Mono, monospace";ctx.fillStyle="#4A5068";
+  ctx.fillText("1 dot ≈ "+scale+" future"+(scale>1?"s":""),6,base-6- (base-40));
+  // convergence chart
+  var cy0=narrow?laneH+8:10, ch=narrow?H-laneH-16:H-40, cx0=chartX+34, cw=chartW-42;
+  ctx.strokeStyle="#14213D";ctx.lineWidth=1.5;ctx.strokeRect(cx0,cy0,cw,ch);
+  ctx.fillStyle="#4A5068";ctx.font="10px JetBrains Mono, monospace";ctx.textAlign="right";
+  [0,.5,1].forEach(function(t){var yy=cy0+ch-(t*ch);ctx.fillText(t.toFixed(1),cx0-4,yy+3);ctx.strokeStyle="rgba(20,33,61,.15)";ctx.beginPath();ctx.moveTo(cx0,yy);ctx.lineTo(cx0+cw,yy);ctx.stroke()});
+  var bar=+$("bar").value/100, yb=cy0+ch-bar*ch;
+  ctx.setLineDash([5,4]);ctx.strokeStyle="#14213D";ctx.beginPath();ctx.moveTo(cx0,yb);ctx.lineTo(cx0+cw,yb);ctx.stroke();ctx.setLineDash([]);
+  ctx.textAlign="left";ctx.fillStyle="#14213D";ctx.fillText("bar",cx0+4,yb-4);
+  var tr=res.traj.filter(function(p){return p[0]<=cap});
+  if(tr.length>1){
+    var X=function(n){return cx0+(n/res.n)*cw},Y=function(p){return cy0+ch-Math.max(0,Math.min(1,p))*ch};
+    ctx.fillStyle="rgba(232,71,42,.22)";ctx.beginPath();
+    tr.forEach(function(p,ix){var se=Math.sqrt(p[1]*(1-p[1])/p[0]);var yy=Y(p[1]+1.96*se);ix?ctx.lineTo(X(p[0]),yy):ctx.moveTo(X(p[0]),yy)});
+    for(var q=tr.length-1;q>=0;q--){var p=tr[q],se=Math.sqrt(p[1]*(1-p[1])/p[0]);ctx.lineTo(X(p[0]),Y(p[1]-1.96*se))}
+    ctx.closePath();ctx.fill();
+    ctx.strokeStyle=F[res.leader].c;ctx.lineWidth=2.5;ctx.beginPath();
+    tr.forEach(function(p,ix){ix?ctx.lineTo(X(p[0]),Y(p[1])):ctx.moveTo(X(p[0]),Y(p[1]))});ctx.stroke();
+  }
+  ctx.fillStyle="#14213D";ctx.font="700 11px JetBrains Mono, monospace";ctx.textAlign="left";
+  ctx.fillText("P("+F[res.leader].k+" is #1) as futures accumulate",cx0+4,cy0+ch+(narrow?-6:16));
+}
+
+function pct(x){return Math.round(x*100)+"%"}
+function update(res){
+  var L=res.leader,p=res.wins[L]/res.n,se=Math.sqrt(p*(1-p)/res.n),bar=+$("bar").value/100;
+  var sorted=res.wins.map(function(w,i){return i}).sort(function(a,b){return res.wins[b]-res.wins[a]});
+  var R2=sorted[1],p2=res.wins[R2]/res.n;
+  var commit=p-1.96*se>=bar, close=!commit&&p>=bar-0.1;
+  $("k1").textContent=pct(p); $("k2").textContent="±"+(1.96*se*100).toFixed(1)+" pts"; $("k3").textContent=pct(res.top2);
+  $("k4").textContent=commit?"Commit":(close?"Scope spike":"Reduce fog");
+  $("rt").innerHTML=sorted.map(function(i){var q=res.wins[i]/res.n;return '<tr><td><i class="dot" style="display:inline-block;vertical-align:-2px;background:'+F[i].c+'"></i> '+F[i].k+' '+F[i].short+'</td><td>'+q.toFixed(3)+'</td><td>'+Math.sqrt(q*(1-q)/res.n).toFixed(3)+'</td><td>'+Math.round(res.mean[i])+'</td></tr>'}).join("");
+  var u=+$("unc").value, eff=+$("eff").value;
+  var dec=commit?("Staff <b>"+F[L].name+"</b> next quarter."):close?("Lean toward <b>"+F[L].name+"</b>, but run a two-week scoping spike before committing the team."):("Do not commit yet. Spend two weeks shrinking the widest ranges, starting with "+F[L].short+" and "+F[R2].short+".");
+  var vp=commit?(F[L].short+" wins in "+pct(p)+" of 1,000s of plausible futures, so we staff it now and check coverage at 30 days."):close?(F[L].short+" is the favorite at "+pct(p)+" but not a lock; two weeks of scoping buys a confident call."):("Our inputs are too foggy to rank: the top two split "+pct(p)+" / "+pct(p2)+", so we measure before we bet a quarter.");
+  $("memoBox").innerHTML=
+   "<dt>Decision</dt><dd>"+dec+"</dd>"+
+   "<dt>Evidence</dt><dd>"+res.n.toLocaleString()+" simulated futures (seed "+seed+", fog "+u+"%). "+F[L].short+" ranks #1 in "+pct(p)+" (95% band "+pct(Math.max(0,p-1.96*se))+"–"+pct(Math.min(1,p+1.96*se))+") and lands in the top two in "+pct(res.top2)+". Runner-up: "+F[R2].short+" at "+pct(p2)+". Mean RICE "+Math.round(res.mean[L])+" vs "+Math.round(res.mean[R2])+".</dd>"+
+   "<dt>Risks</dt><dd>"+(L===0?"Effort is the swing input: at "+eff+" eng-weeks the lead "+(eff>22?"is fragile":"holds")+". Wrong-tag propagation must stay under 0.5% or stewards will turn it off. ":"")+"Impact scores are judgment calls; a biased impact range moves the answer more than more simulation does. "+(u>=70?"Fog is high, so any ranking here is soft.":"")+"</dd>"+
+   "<dt>Rollout / experiment plan</dt><dd>"+(L===0?"Beta customers first (10 regulated workspaces), propagation in suggest-only mode for 2 weeks, measure wrong-tag and override rates, then auto-apply for opt-in workspaces, then GA. Kill switch per governed tag.":"Design partner preview with 10 workspaces, instrument the success metric from day one, gate GA on the four guardrails.")+"</dd>"+
+   "<dt>Next step</dt><dd>"+(commit?"Kickoff with catalog + lineage eng Monday; lock guardrail dashboards before code ships.":"Ask eng for a sliced effort estimate on "+F[L].short+" and pull 90-day lineage reach from system tables to narrow the Reach range.")+"</dd>"+
+   '<div class="vp">What I\'d tell the VP in one sentence: '+vp+'</div>';
+  $("seedO").textContent="seed "+seed+" · "+res.n.toLocaleString()+" futures";
+}
+
+function run(){
+  var n=+$("n").value,u=+$("unc").value,eff=+$("eff").value;
+  var res=simulate(n,u,eff,seed);last=res;update(res);
+  if(anim)cancelAnimationFrame(anim);
+  if(reduce){draw(res,res.n);return}
+  var shown=0,stepN=Math.max(20,Math.ceil(n/90));
+  (function tick(){shown=Math.min(n,shown+stepN);draw(res,shown);if(shown<n)anim=requestAnimationFrame(tick)})();
+}
+function labels(){$("uncO").textContent=$("unc").value+"%";$("nO").textContent=(+$("n").value).toLocaleString();$("effO").textContent=$("eff").value;$("barO").textContent=$("bar").value+"%"}
+["unc","n","eff","bar"].forEach(function(id){$(id).addEventListener("input",labels);$(id).addEventListener("change",run)});
+$("run").addEventListener("click",run);
+$("reseed").addEventListener("click",function(){seed=Math.floor(Math.random()*90000)+1000;run()});
+window.addEventListener("resize",function(){if(last)draw(last,last.n)});
+labels();run();
+})();
+</script>
+</body>
+</html>
